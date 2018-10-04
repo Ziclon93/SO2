@@ -1,0 +1,15 @@
+Codi:
+leer fichero, columna 15 retraso, 17 origen, 18 destino
+
+arbol, cada nodo es el aeropuerto de origen, emmagatzemar en una llista enllaçada els aeroports destins amb el retard total i el nombre de vols computats.
+
+computar per al areoport d'origen del segon argument de la funció el retard mig per cada destí, imprimir per pantalla
+
+Computar l'aeroport amb més destinacions, imprimir per pantalla.
+
+Document:
+– Comenteu els camps membres de l’estructura del node de l’arbre.
+Indiqueu modificacions per tal de permetre que l’arbre binari indexi per cadenes de caràcters.
+Feu el mateix pels camps membres de la llista indexada.
+
+– Indiqueu algun dels resultats. Proveu, per exemple, amb els aeroports de DEN (el corresponent a Denver) o ATL (Atlanta).
