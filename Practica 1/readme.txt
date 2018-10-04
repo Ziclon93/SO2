@@ -1,0 +1,1 @@
+Crear objeto:gcc prac2.c -o test -lmejecutar:./test
