@@ -25,6 +25,7 @@
 #include <stdarg.h>
 
 #include "red-black-tree.h"
+#include "linked-list/linked-list.h"
 
 /**
  *
@@ -53,7 +54,7 @@ static int compare_key1_less_than_key2(RBTREE_KEY_TYPE key1, RBTREE_KEY_TYPE key
 
     rc = 0;
 
-    if (key1 < key2)
+    if (strcmp(key1,key2) < 0)
         rc = 1;
 
     return rc;
@@ -72,8 +73,9 @@ static int compare_key1_equal_to_key2(RBTREE_KEY_TYPE key1, RBTREE_KEY_TYPE key2
 
     rc = 0;
 
-    if (key1 == key2)
+    if (strcmp(key1,key2)==0){
         rc = 1;
+    }
 
     return rc;
 }

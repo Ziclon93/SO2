@@ -7,7 +7,10 @@
  *
  */
 
-#define RBTREE_KEY_TYPE int 
+#define RBTREE_KEY_TYPE char* 
+#include "../linked-list/linked-list.h"
+
+
 
 /**
  *
@@ -23,7 +26,9 @@ typedef struct node_data_
 {
     // The variable used to index the tree has to be called "key".
     // The type may be any you want (float, char *, etc)
-    RBTREE_KEY_TYPE key;     
+    RBTREE_KEY_TYPE key;
+    
+    list_ * link;
 
     // This is the additional information that will be stored
     // within the structure. You may adapt it to your needs:

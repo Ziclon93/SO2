@@ -20,7 +20,7 @@
  *
  */
 
-#define LIST_KEY_TYPE int
+#define LIST_KEY_TYPE char*
 
 /**
  *
@@ -34,11 +34,13 @@
 typedef struct list_data_ {
   // The variable used to index the list has to be called "key".
   LIST_KEY_TYPE key;
+  int retraso;
 
   // This is the additional information that will be stored
   // within the structure. This additional information is associated
   // to the key. You may include any field you may need useful.
   int num_times;
+
 } list_data;
 
 
