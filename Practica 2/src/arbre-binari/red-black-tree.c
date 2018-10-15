@@ -25,7 +25,7 @@
 #include <stdarg.h>
 
 #include "red-black-tree.h"
-#include "linked-list/linked-list.h"
+#include "../linked-list/linked-list.h"
 
 /**
  *

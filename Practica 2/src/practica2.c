@@ -83,7 +83,7 @@ int main(int argc, char **argv)
 
 
                 n_data = malloc(sizeof(node_data));
-                n_data->retraso = 0;
+
                 n_data->key = a;
                 
                 n_data->num_vegades = 1;
@@ -133,7 +133,6 @@ int main(int argc, char **argv)
 
             //En nuestro caso siempre estará pero, no quiero ser redundante con el codigo.
             if (n_data != NULL){
-                n_data
 
             }
 

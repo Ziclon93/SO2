@@ -28,7 +28,7 @@ typedef struct node_data_
     // The type may be any you want (float, char *, etc)
     RBTREE_KEY_TYPE key;
     
-    list_ * link;
+    list * link;
 
     // This is the additional information that will be stored
     // within the structure. You may adapt it to your needs:
