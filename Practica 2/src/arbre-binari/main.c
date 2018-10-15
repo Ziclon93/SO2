@@ -11,6 +11,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <math.h>
+#include <string.h>	
 
 #include "red-black-tree.h"
 
@@ -29,6 +31,79 @@ int main(int argc, char **argv)
   rb_tree *tree;
   node_data *n_data;
 
+  /*--------------Nuestro codigo--------------*/
+
+  FILE *fp;
+	char str[100];
+
+	/* opening file for reading */
+	fp = fopen("../aeroports/aeroports.csv" , "r");
+
+	if(fp == NULL)
+	{
+		perror("Error opening file");
+		return(-1);
+	}
+	if( fgets (str, 100, fp)!=NULL )
+	{
+		puts(str);
+	}
+
+	int SIZE = atoi(str);
+
+	char**listIATA = malloc(SIZE*sizeof(char*));
+
+	for(int i=0; i < SIZE; i++){
+		if( fgets (str, 100, fp)!=NULL )
+		{
+			puts(str);
+			str[strlen(str) -1] = '\0';
+
+			listIATA[i] = malloc((strlen(str) +1) * sizeof(char));
+
+			//Metemos el string a la lista correspondiente.
+
+			strcpy(listIATA[i],str);
+
+		}
+	}
+
+	fclose(fp);
+
+
+	/* opening file for reading */
+	fp = fopen("../dades/dades.csv" , "r");
+
+  SIZE = 1001;
+
+	char**listDades = malloc(SIZE*sizeof(char*));
+
+	for(int i=0; i < SIZE; i++){
+		if( fgets (str, 100, fp)!=NULL )
+		{
+			puts(str);
+			str[strlen(str) -1] = '\0';
+
+			listDades[i] = malloc((strlen(str) +1) * sizeof(char));
+
+			//Metemos el string a la lista correspondiente.
+
+			strcpy(listDades[i],str);
+
+		}
+	}
+
+	fclose(fp);
+
+
+
+
+
+
+
+
+
+ /*---------------------SU CODIGO -----------------------*/
   if (argc != 2)
   {
     printf("Usage: %s maxnum\n", argv[0]);
@@ -96,7 +171,7 @@ int main(int argc, char **argv)
   /* Delete the tree */
   delete_tree(tree);
   free(tree);
-
+  
   return 0;
 }
 
