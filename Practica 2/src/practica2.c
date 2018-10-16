@@ -61,7 +61,7 @@ int main(int argc, char **argv)
 
     list * lista_origen;
     list_data *l_data;
-
+    list_item *l_item;
 
     tree = (rb_tree *) malloc(sizeof(rb_tree));
 
@@ -71,7 +71,7 @@ int main(int argc, char **argv)
     char str[1000];
 
     /* opening file for reading */
-    fp = fopen("aeroports/aeroports.csv" , "r");
+    fp = fopen(argv[1] , "r");
 
     if(fp == NULL)
     {
@@ -85,7 +85,6 @@ int main(int argc, char **argv)
 
     int SIZE = atoi(str);
 
-    // No se si funciona, es mas o menos como deberia ir
     for(int i=0; i < SIZE; i++){
         if( fgets (str, 100, fp)!=NULL )
         {
@@ -132,7 +131,7 @@ int main(int argc, char **argv)
 
 
     /* opening file for reading */
-    fp = fopen("dades/dades.csv" , "r");
+    fp = fopen(argv[2] , "r");
 
     SIZE = 10001;  //deberia valer para cualquier size
 
@@ -183,13 +182,13 @@ int main(int argc, char **argv)
             
 
         // Cogemos la lista del nodo encontrado
-        lista_origen = (list*) n_data->link;
+        lista_origen = n_data->link;
 
+        /* //NO FUNCIONA , no sabemos porque.
 
         // buscamos si el destino esta en la lista
-        l_data = find_list(lista_origen, destino);
-
-        
+        l_data = find_list(lista_origen, "ISP");
+ 
         if (l_data != NULL) {
             // Si está sumamos un vuelo y el retraso al total
             l_data->num_times++;
@@ -204,9 +203,58 @@ int main(int argc, char **argv)
 
             insert_list(lista_origen, l_data);
         }
-        
+        */
         
     }
 
+    
+
     fclose(fp);
+
+
+    char * value = argv[3];
+
+    //Encontramos el nodo que corresponde al origen que buscamos
+    n_data = find_node(tree, value);
+    
+    //cogemos el item de la lista que contiene el retraso
+    l_item = n_data->link->first;
+
+    //mientras no sea null
+    while (l_item != NULL) {
+        l_data = l_item->data;
+        //Imprimimos el destino y el retraso previamente calculado en la inserción.
+         printf("Key %s appears %d times\n", l_data->key, l_data->retraso);
+        l_item = l_item->next;
+    }
+
+    
+    fp = fopen(argv[1] , "r");
+
+    if(fp == NULL)
+    {
+        perror("Error opening file");
+        return(-1);
+    }
+    if( fgets (str, 100, fp)!=NULL )
+    {
+        puts(str);
+    }
+
+    SIZE = atoi(str);
+
+    for(int i=0; i < SIZE; i++){
+        if( fgets (str, 100, fp)!=NULL )
+        {
+            puts(str);
+            str[strlen(str) -1] = '\0';
+            n_data = find_node(tree, str); 
+
+
+        }
+    }
+
+    fclose(fp);
+    
+    
 }
