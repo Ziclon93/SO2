@@ -19,6 +19,31 @@
 
 #define MAXVALUE 10
 
+char * spliter(char*cadena, int columnF){
+
+    char * result = malloc(sizeof(char)*50);
+    int current, column = 0;
+
+    for(int i = 0; i < strlen(cadena); i++){
+
+        if(cadena[i] == ','){
+            column++;
+            if (column == columnF){
+                return result;
+            }else{
+                strcpy(result, "");
+            }
+        }
+        else{
+            current = strlen(result);
+            result[current] = cadena[i];
+            result[current+1] = '\0';
+        }
+    }
+
+    return result;
+    
+}
 /**
  *
  *  Main function. Contains a simple example using a red-black-tree. 
@@ -32,6 +57,11 @@ int main(int argc, char **argv)
 
     rb_tree *tree;
     node_data *n_data;
+
+
+    list * lista_origen;
+    list_data *l_data;
+
 
     tree = (rb_tree *) malloc(sizeof(rb_tree));
 
@@ -89,7 +119,7 @@ int main(int argc, char **argv)
                 // Guardamos la informacion adicional
                 n_data->num_vegades = 1;
 		// Asignamos la lista
-                n_data->list = l;   
+                n_data->link = l;   
                 
                 // Insertamos el nodo
                 insert_node(tree, n_data);
@@ -106,77 +136,76 @@ int main(int argc, char **argv)
 
     SIZE = 10001;  //deberia valer para cualquier size
 
-    char**listDades = malloc(SIZE*sizeof(char*));
-
+    int retraso;
+    char *origen, *destino;
     // deberia ser un while, hasta que no hubiera siguiente linea
-    for(int i=0; i < SIZE; i++){
-        if( fgets (str, 1000, fp)!=NULL ){
-            puts(str);
-            str[strlen(str) -1] = '\0';
 
+    if( fgets (str, 10000, fp)!=NULL )
+	{
+		/* writing content to stdout */
+		puts(str);
+        SIZE = strlen(str);
+	}
 
-            char *strsplit  = strtok(str, ","); // No se puede usar strtok
-						// Hay que hacer una función propia que
-						// extraiga las subcadenas entre dos comas
-            int retraso;
-            char *origen, *destino;
+    while (fgets(str, SIZE, fp)){
+        puts(str);
+        str[strlen(str) -1] = '\0';
 
-            for (int val = 2; val < 19; val++){
-                strsplit = strtok(NULL, ",");
-                if (val == 15){
-                    retraso = atoi(strsplit);
-                }
-                else if (val == 17){
-                    origen = strsplit;
-                }
-                else if (val == 18){
-                    destino = strsplit;
-                }
-            }
-            
-		
-	    // Es mas o menos como deberia ir, hay que hacer la funcion de las subcadenas
-	    // y mirar si hay que cambiar algo de aqui
+        retraso = atoi(spliter(str,15));
+        origen = spliter(str,17);
+        destino = spliter(str,18);
 
-	    // esto depende de nuestra función para extraer subcadenas:
-	    
-	    // Buscamos el nodo en el arbol
-            n_data = find_node(tree, origen);
-	    if (n_data != NULL) {
-	      // si está en el arbol incementamos el numero
-	      n_data->num_vegades++;
-	    } else { // (No deberia hacer falta, el arbol ya esta creado)
+        printf("%d \n %s \n %s \n", retraso,origen,destino);
+        
+        
+    
+        // Es mas o menos como deberia ir, hay que hacer la funcion de las subcadenas
+        // y mirar si hay que cambiar algo de aqui
 
-	      // Si no está reservamos memoria y lo añadimos
-	      n_data = malloc(sizeof(node_data));
-	      n_data->key = origen;     
-	      n_data->num_vegades = 1;
+        // esto depende de nuestra función para extraer subcadenas:
+        
+        // Buscamos el nodo en el arbol
 
-	      insert_node(tree, n_data);
-	    }
-		    
+        n_data = find_node(tree, origen);
+        
+        if (n_data != NULL) {
+        // si está en el arbol incementamos el numero
+            n_data->num_vegades++;
+        } else { // (No deberia hacer falta, el arbol ya esta creado)
 
-	    // Cogemos la lista del nodo encontrado
-            lista_origen = n_data->link
-	
-	    // buscamos si el destino esta en la lista
-	    l_data = find_list(lista_origen, destino); 
-	    if (l_data != NULL) {
-	      // Si está sumamos un vuelo y el retraso al total
-	      l_data->num_times++;
-	      l_data->retraso += retraso;
+        // Si no está reservamos memoria y lo añadimos
+            n_data = malloc(sizeof(node_data));
+            n_data->key = origen;     
+            n_data->num_vegades = 1;
 
-	    } else {
-	      // Si no esta en la lista reservamos memoria y lo añadimos
-	      l_data = malloc(sizeof(list_data));
-	      l_data->key = a;
-	      l_data->retraso = retraso;
-	      l_data->num_times = 1;
-
-	      insert_list(lista_origen, l_data);
-	    }
-
+            insert_node(tree, n_data);
         }
+            
+
+        // Cogemos la lista del nodo encontrado
+        lista_origen = (list*) n_data->link;
+
+
+        // buscamos si el destino esta en la lista
+        l_data = find_list(lista_origen, destino);
+
+        
+        if (l_data != NULL) {
+            // Si está sumamos un vuelo y el retraso al total
+            l_data->num_times++;
+            l_data->retraso = (l_data->retraso* l_data->num_times-1) + retraso/ l_data->num_times;
+
+        } else {
+            // Si no esta en la lista reservamos memoria y lo añadimos
+            l_data = malloc(sizeof(list_data));
+            l_data->key = a;
+            l_data->retraso = retraso;
+            l_data->num_times = 1;
+
+            insert_list(lista_origen, l_data);
+        }
+        
+        
     }
 
     fclose(fp);
