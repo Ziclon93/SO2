@@ -183,11 +183,11 @@ int main(int argc, char **argv)
 
         // Cogemos la lista del nodo encontrado
         lista_origen = n_data->link;
-
-        /* //NO FUNCIONA , no sabemos porque.
+    /*
+         //NO FUNCIONA , no sabemos porque.
 
         // buscamos si el destino esta en la lista
-        l_data = find_list(lista_origen, "ISP");
+        l_data = find_list(lista_origen, destino);
  
         if (l_data != NULL) {
             // Si está sumamos un vuelo y el retraso al total
@@ -204,7 +204,6 @@ int main(int argc, char **argv)
             insert_list(lista_origen, l_data);
         }
         */
-        
     }
 
     
@@ -218,7 +217,7 @@ int main(int argc, char **argv)
     n_data = find_node(tree, value);
     
     //cogemos el item de la lista que contiene el retraso
-    l_item = n_data->link->first;
+     l_item = n_data->link->first;
 
     //mientras no sea null
     while (l_item != NULL) {
@@ -242,17 +241,31 @@ int main(int argc, char **argv)
     }
 
     SIZE = atoi(str);
+    char *result = malloc(sizeof(char)*4);
+    int var,max= 0;
 
     for(int i=0; i < SIZE; i++){
         if( fgets (str, 100, fp)!=NULL )
         {
             puts(str);
             str[strlen(str) -1] = '\0';
-            n_data = find_node(tree, str); 
 
+            //Todos han sido añadidos anteriormente
+            n_data = find_node(tree, str);
+
+            var = n_data->link->num_items;
+
+            //si el valor obtenido es superior al maximo encontrado
+            if (var>max){
+                //Sera de medida 4 (los 3 caracteres y el \0)
+                result = str;
+                max = var;
+            }
 
         }
     }
+
+    printf(" El aeropuerto con mas destinaciones es: %s", result);
 
     fclose(fp);
     
