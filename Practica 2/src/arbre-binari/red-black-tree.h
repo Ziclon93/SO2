@@ -7,7 +7,9 @@
  *
  */
 
-#define RBTREE_KEY_TYPE char* 
+#define RBTREE_KEY_TYPE char*
+
+
 #include "../linked-list/linked-list.h"
 
 
