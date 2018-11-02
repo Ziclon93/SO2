@@ -59,8 +59,13 @@ int main(int argc, char **argv)
     rb_tree *tree;
     node_data *n_data;
 
+    list *l;
+    list_item *l_item;
+    list_data *l_data;
+
 
     tree = (rb_tree *) malloc(sizeof(rb_tree));
+    init_tree(tree);
 
     fp = fopen(argv[1] , "r");
 
@@ -75,39 +80,52 @@ int main(int argc, char **argv)
     }
 
     SIZE = atoi(str);
+    char *pruebas = "AKA";
 
     for(int i=0; i < SIZE; i++){
         if( fgets (str, 100, fp)!=NULL )
         {
             puts(str);
             str[strlen(str) -1] = '\0';
+            if ( i%2 != 0){
+                pruebas = str;
+            }
             
-            printf("-%s-\n", str);
             //Añadimos el nodo correspondiente al arbol
+            printf("Esta es la comparación: %ld, %ld, %d\n", strlen(pruebas), strlen(str), strcmp(str,pruebas));
 
-            if (i==0){
+            
+            n_data = find_node(tree, str); 
+
+
+            if (n_data != NULL) {
+                n_data->num_vegades++;
+                printf("hey :%s, num vegades: %d\n",n_data->key, n_data->num_vegades);        
+            } 
+            else {
+
+                l = (list *) malloc(sizeof(list));
+                init_list(l);
 
                 n_data = malloc(sizeof(node_data));
                 n_data->key = str;
+                n_data->link = l;
                 n_data->num_vegades = 1;
                 insert_node(tree, n_data);
-            }
-            else{
-                n_data = find_node(tree, str); 
+                printf("JUE\n");
 
-                if (n_data != NULL) {
-                    n_data->num_vegades++;
-                } else {
-                    n_data = malloc(sizeof(node_data));
-                    n_data->key = str;
-                    n_data->num_vegades = 1;
-                    insert_node(tree, n_data);
-                }
             }
             
         }
     }
+    
+    n_data = find_node(tree, pruebas); 
+    printf("FINAL : %s\n", n_data->key);
 
+    if(n_data != NULL){
+        printf("Numero de vegades en nodo: %d\n", n_data->num_vegades);
+    }
+    
     delete_tree(tree);
     free(tree);
 
