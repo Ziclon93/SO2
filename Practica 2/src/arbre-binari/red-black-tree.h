@@ -7,10 +7,10 @@
  *
  */
 
+#include "../linked-list/linked-list.h"
 #define RBTREE_KEY_TYPE char*
 
 
-#include "../linked-list/linked-list.h"
 
 
 
