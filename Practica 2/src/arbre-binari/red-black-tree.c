@@ -38,6 +38,8 @@
 
 static void free_node_data(node_data *data)
 {
+    delete_list(data->link);
+    free(data->link);
     free(data);
 }
 
