@@ -85,18 +85,21 @@ int calcular_lista_num(list *l){
 }
 
 void guardar_llista(list *l, FILE *fp){
+	int n_vols, retras;
 	list_item *item = malloc(sizeof(list_item));
 	item = l->first;
 
 	while(item != NULL){
 		// Guardem el destí
-		fwrite(&item->data->key, sizeof(char), strlen(item->data->key), fp);
+		fwrite(item->data->key, sizeof(char), strlen(item->data->key), fp);
 
 		// Guardem el nombre de vols
-		fwrite(&item->data->num_times, sizeof(int), 1, fp);
+		n_vols = item->data->num_times;
+		fwrite(&(item->data->num_times), sizeof(int), 1, fp);
 
 		// Guardem el retràs
-		fwrite(&item->data->retraso, sizeof(int), 1, fp);
+		retras = item->data->retraso;
+		fwrite(&(item->data->retraso), sizeof(int), 1, fp);
 
 		item = item->next;
 	}
@@ -316,7 +319,7 @@ int main(int argc, char **argv){
 		            fgets(str1, MAXLINE, stdin);
 		            str1[strlen(str1)-1]=0;
 
-					fp = fopen(str1, "w");
+					fp = fopen(str1, "wb");
 		            if(!fp) {
 		             	perror("Error opening file");
 		              	return(-1);
