@@ -38,10 +38,8 @@ char * spliter(char* cadena, int columnF, char* result){
 
     char * prov = malloc(sizeof(char)*100);
     int current = 0, column = 0;
-    int i;
 
-
-    for(i= 0; i < strlen(cadena); i++){
+    for(int i = 0; i < strlen(cadena); i++){
 
         if(cadena[i] == ','){
             column++;
@@ -57,32 +55,26 @@ char * spliter(char* cadena, int columnF, char* result){
             prov[current+1] = '\0';
         }
     }
-
     free(prov);
 
 }
 
 int calcular_numero_nodes(node *n){
     int r = 0;
-		int l = 0;
+	int l = 0;
 
-		if (n->right != NIL)
-				r = calcular_numero_nodes(n->right);
+	if (n->right != NIL)
+		r = calcular_numero_nodes(n->right);
 
-		if (n->left != NIL)
-				l = calcular_numero_nodes(n->left);
+	if (n->left != NIL)
+		l = calcular_numero_nodes(n->left);
 
-		return r + l + 1;
-
-}
-/*
-int cargar_arbre(FILE *fp){
+	return r + l + 1;
 
 }
-*/
 
 int calcular_lista_num(list *l){
-    list_item *current, *next;
+    list_item *current;
     int result = 0;
     current = l->first;
     while (current != NULL){
@@ -90,81 +82,52 @@ int calcular_lista_num(list *l){
         current = current->next;
     }
     return result;
+}
+
+void guardar_llista(list *l, FILE *fp){
+	list_item *item = malloc(sizeof(list_item));
+	item = l->first;
+
+	while(item != NULL){
+		// Guardem el destí
+		fwrite(&item->data->key, sizeof(char), strlen(item->data->key), fp);
+
+		// Guardem el nombre de vols
+		fwrite(&item->data->num_times, sizeof(int), 1, fp);
+
+		// Guardem el retràs
+		fwrite(&item->data->retraso, sizeof(int), 1, fp);
+
+		item = item->next;
+	}
+}
+
+void guardar_node(node *x, FILE *fp){
+	int n_elements;
+	// Guardem l'origen
+	fwrite(x->data->key, sizeof(char), strlen(x->data->key), fp);
+
+	// Calculem i guardem el número d'elements
+	n_elements = calcular_lista_num(x->data->link);
+	fwrite(&n_elements, sizeof(int), 1, fp);
+
+	// Guardem els elements de la llista
+	guardar_llista(x->data->link, fp);
 
 }
 
+
 void guardar_arbre(node *x, FILE *fp){
 
-    list_item *current, *next;
-    char str[10000] = "\0";
-    int numLista;
-    char prov[20];
-
-    if (x->right != NIL){ 
-        strcpy(prov,x->data->key);
-        strcat(str,strcat(prov,","));
-        
-        current = x->data->link->first;
-
-        numLista = calcular_lista_num(x->data->link);
-        sprintf(prov,"%d", numLista);
-
-
-        strcat(prov,",");
-        strcat(str,prov);
-
-        while (current != NULL){
-            next = current->next;
-            strcpy(prov,current->data->key);
-            strcat(str,strcat(prov,","));
-
-            sprintf(prov,"%d", current->data->num_times);
-            strcat(prov,",");
-            strcat(str,prov);
-            
-            sprintf(prov,"%d", current->data->retraso);
-            strcat(prov,",");   
-            strcat(str,prov);
-
-            current = next;
-        }
-        fwrite(&str,sizeof(char),strlen(str),fp);
-        printf("---JA! : %s\n",str);
-        guardar_arbre(x->right,fp);
-    }
-
-    if (x->left != NIL){
-        strcpy(prov,x->data->key);
-        strcat(str,strcat(prov,","));
-        
-        current = x->data->link->first;
-
-        numLista = calcular_lista_num(x->data->link);
-        sprintf(prov,"%d", numLista);
-
-
-        strcat(prov,",");
-        strcat(str,prov);
-
-        while (current != NULL){
-            strcpy(prov,current->data->key);
-            strcat(str,strcat(prov,","));
-
-            sprintf(prov,"%d", current->data->num_times);
-            strcat(prov,",");
-            strcat(str,prov);
-            
-            sprintf(prov,"%d", current->data->retraso);
-            strcat(prov,",");   
-            strcat(str,prov);
-
-            current = next;
-        }
-        fwrite(&str,sizeof(char),strlen(str),fp);
-        printf("---JA! : %s\n",str);
+	if (x->left != NIL){
         guardar_arbre(x->left,fp);
     }
 
+	guardar_node(x, fp);
+
+    if (x->right != NIL){
+        guardar_arbre(x->right,fp);
+    }
 }
 
 int creacio_arbre(char* aeroports, char* dades){
@@ -293,7 +256,24 @@ int creacio_arbre(char* aeroports, char* dades){
   fclose(fp);
 }
 
+void calcular_retard(char *vol){
+		// Calcular retards
+		node_data *node = malloc(sizeof(node_data));
+		list_item *item = malloc(sizeof(list_item));
+		int media;
 
+		node = find_node(tree, vol);
+		item = node->link->first;
+
+		while(item != NULL){
+			media = item->data->retraso / item->data->num_times;
+			printf("%s: %d\n", item->data->key, media);
+			item = item->next;
+		}
+
+		free(node);
+		free(item);
+}
 
 /**
  *
@@ -328,47 +308,52 @@ int main(int argc, char **argv){
                 break;
 
             case 2:   // Emmagatzemar arbre a disc
-                printf("Introdueix el nom de fitxer en el qual es desara l'arbre: ");
-                fgets(str1, MAXLINE, stdin);
-                str1[strlen(str1)-1]=0;
+				if(!tree){
+					printf("No hi ha cap arbre carregat\n");
 
-                /* Falta codi */
+				}else{
+		        	printf("Introdueix el nom de fitxer en el qual es desara l'arbre: ");
+		            fgets(str1, MAXLINE, stdin);
+		            str1[strlen(str1)-1]=0;
 
-                fp = fopen(str1, "w");
-                if(!fp) {
-                  perror("Error opening file");
-                  return(-1);
-                }
-            
-                int mn = MAGIC_NUMBER;
-                fwrite(&mn, sizeof(int), 1, fp);
+					fp = fopen(str1, "w");
+		            if(!fp) {
+		             	perror("Error opening file");
+		              	return(-1);
+		            }
 
-                int num_nodes = calcular_numero_nodes(tree->root);
-                fwrite(&num_nodes, sizeof(int), 1, fp);
-                printf("numero de nodos: %d", num_nodes);
+			        int mn = MAGIC_NUMBER;
+			        fwrite(&mn, sizeof(int), 1, fp);
 
-                guardar_arbre(tree->root,fp);
-                fclose(fp);
+			        int num_nodes = calcular_numero_nodes(tree->root);
+			        fwrite(&num_nodes, sizeof(int), 1, fp);
+			        printf("numero de nodos: %d", num_nodes);
 
+			        guardar_arbre(tree->root,fp);
+			        fclose(fp);
+				}
                 break;
 
             case 3:   // Llegir arbre de disc
+
+				/* Falta alliberar memoria */
+
                 printf("Introdueix nom del fitxer que conte l'arbre: ");
                 fgets(str1, MAXLINE, stdin);
                 str1[strlen(str1)-1]=0;
 
                 /* Falta codi */
 
-								fp = fopen(str1, "r");
-								if(!fp) {
-									perror("Error opening file");
-									return(-1);
-								}
-								int magic, n_nodes;
-								fread(&magic, sizeof(int), 1, fp);
-								fread(&n_nodes, sizeof(int), 1, fp);
+				fp = fopen(str1, "r");
+				if(!fp) {
+					perror("Error opening file");
+					return(-1);
+				}
+				int magic, n_nodes;
+				fread(&magic, sizeof(int), 1, fp);
+				fread(&n_nodes, sizeof(int), 1, fp);
 
-								printf("Magic number: %d\nNumero de nodes: %d\n", magic, n_nodes);
+				printf("Magic number: %d\nNumero de nodes: %d\n", magic, n_nodes);
 
                 break;
 
@@ -377,28 +362,12 @@ int main(int argc, char **argv){
                 fgets(str1, MAXLINE, stdin);
                 str1[strlen(str1)-1]=0;
 
-                /* Falta codi */
+				if (strlen(str1) != 0)
+				calcular_retard(str1);
+				else{
+					/* Aeroport amb més destins */
+				}
 
-                // Calcular retards
-                node_data *node = malloc(sizeof(node_data));
-                list_item *item = malloc(sizeof(list_item));
-                list_data *data = malloc(sizeof(list_data));
-                int media;
-
-                node = find_node(tree, str1);
-                item = node->link->first;
-
-                while(item != NULL){
-                  data = item->data;
-                  media = data->retraso / data->num_times;
-
-                  printf("%s: %d\n", data->key, media);
-                  item = item->next;
-                }
-
-                free(node);
-                free(item);
-                free(data);
                 break;
 
             case 5:   // Sortir
