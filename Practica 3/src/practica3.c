@@ -62,15 +62,6 @@ char * spliter(char* cadena, int columnF, char* result){
 
 }
 
-void recorrido(node *x){
-    printf(" ReCORreMos LokoHh: %s\n", x->data->key);
-    if (x->right != NIL)
-        recorrido(x->right);
-
-    if (x->left != NIL)
-        recorrido(x->left);
-}
-
 int calcular_numero_nodes(node *n){
     int r = 0;
 		int l = 0;
@@ -84,12 +75,103 @@ int calcular_numero_nodes(node *n){
 		return r + l + 1;
 
 }
+/*
+int cargar_arbre(FILE *fp){
 
+}
+*/
+
+int calcular_lista_num(list *l){
+    list_item *current, *next;
+    int result = 0;
+    current = l->first;
+    while (current != NULL){
+        result +=1;
+        current = current->next;
+    }
+    return result;
+
+}
+
+void guardar_arbre(node *x, FILE *fp){
+
+    list_item *current, *next;
+    char str[10000] = "\0";
+    int numLista;
+    char prov[20];
+
+    if (x->right != NIL){ 
+        strcpy(prov,x->data->key);
+        strcat(str,strcat(prov,","));
+        
+        current = x->data->link->first;
+
+        numLista = calcular_lista_num(x->data->link);
+        sprintf(prov,"%d", numLista);
+
+
+        strcat(prov,",");
+        strcat(str,prov);
+
+        while (current != NULL){
+            next = current->next;
+            strcpy(prov,current->data->key);
+            strcat(str,strcat(prov,","));
+
+            sprintf(prov,"%d", current->data->num_times);
+            strcat(prov,",");
+            strcat(str,prov);
+            
+            sprintf(prov,"%d", current->data->retraso);
+            strcat(prov,",");   
+            strcat(str,prov);
+
+            current = next;
+        }
+        fwrite(&str,sizeof(char),strlen(str),fp);
+        printf("---JA! : %s\n",str);
+        guardar_arbre(x->right,fp);
+    }
+
+    if (x->left != NIL){
+        strcpy(prov,x->data->key);
+        strcat(str,strcat(prov,","));
+        
+        current = x->data->link->first;
+
+        numLista = calcular_lista_num(x->data->link);
+        sprintf(prov,"%d", numLista);
+
+
+        strcat(prov,",");
+        strcat(str,prov);
+
+        while (current != NULL){
+            strcpy(prov,current->data->key);
+            strcat(str,strcat(prov,","));
+
+            sprintf(prov,"%d", current->data->num_times);
+            strcat(prov,",");
+            strcat(str,prov);
+            
+            sprintf(prov,"%d", current->data->retraso);
+            strcat(prov,",");   
+            strcat(str,prov);
+
+            current = next;
+        }
+        fwrite(&str,sizeof(char),strlen(str),fp);
+        printf("---JA! : %s\n",str);
+        guardar_arbre(x->left,fp);
+    }
+
+}
 
 int creacio_arbre(char* aeroports, char* dades){
   char str[10000];
   char *row,*retrasoChar, *origen,*destino;
   int SIZE,retraso;
+  FILE *fp;
 
   node_data *n_data;
 
@@ -257,13 +339,16 @@ int main(int argc, char **argv){
                   perror("Error opening file");
                   return(-1);
                 }
-								int mn = (int)MAGIC_NUMBER;
+            
+                int mn = MAGIC_NUMBER;
                 fwrite(&mn, sizeof(int), 1, fp);
 
                 int num_nodes = calcular_numero_nodes(tree->root);
-								fwrite(&num_nodes, sizeof(int), 1, fp);
+                fwrite(&num_nodes, sizeof(int), 1, fp);
+                printf("numero de nodos: %d", num_nodes);
 
-								printf("numero de nodos: %d", num_nodes);
+                guardar_arbre(tree->root,fp);
+                fclose(fp);
 
                 break;
 
