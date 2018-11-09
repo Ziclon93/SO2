@@ -91,7 +91,7 @@ void guardar_llista(list *l, FILE *fp){
 
 	while(item != NULL){
 		// Guardem el destí
-		fwrite(item->data->key, sizeof(char), strlen(item->data->key), fp);
+		fwrite(item->data->key, sizeof(char), 3, fp);
 
 		// Guardem el nombre de vols
 		n_vols = item->data->num_times;
@@ -108,7 +108,7 @@ void guardar_llista(list *l, FILE *fp){
 void guardar_node(node *x, FILE *fp){
 	int n_elements;
 	// Guardem l'origen
-	fwrite(x->data->key, sizeof(char), strlen(x->data->key), fp);
+	fwrite(x->data->key, sizeof(char), 3, fp);
 
 	// Calculem i guardem el número d'elements
 	n_elements = calcular_lista_num(x->data->link);
@@ -134,13 +134,15 @@ void guardar_arbre(node *x, FILE *fp){
 }
 
 void carregar_llista(list *l, int n, FILE *fp){
-	init_list(l);
-	list_data *data = malloc(sizeof(list_data));
-	char *desti;
+	list_data *data;
 	int n_vols, retras;
+
 	for(int i = 0; i < n; i++){
-		fread(desti, sizeof(char), 3, fp);
-		data->key = desti;
+		data = malloc(sizeof(list_data));
+		data->key = malloc(sizeof(char)*4);
+
+		fread(data->key, sizeof(char), 3, fp);
+		data->key[3] = '\0';
 
 		fread(&n_vols, sizeof(int), 1, fp);
 		data->num_times = n_vols;
@@ -154,23 +156,25 @@ void carregar_llista(list *l, int n, FILE *fp){
 
 void carregar_arbre(int n, FILE *fp){
 	tree = (rb_tree *) malloc(sizeof(rb_tree));
-	list *l = malloc(sizeof(list));
-	node_data *n_data = malloc(sizeof(node_data));
-	n_data->key = malloc(sizeof(char)*4);
+	node_data *n_data;;
 	int n_elem;
-	char *origen;
 
 	init_tree(tree);
 
 	for(int i = 0; i < n; i++){
-		fread(origen, sizeof(char), 3, fp);
-		n_data->key = origen;
+
+
+		n_data = malloc(sizeof(node_data));
+		n_data->key = malloc(sizeof(char) * 4);
+
+		n_data->link = malloc(sizeof(list));
+		init_list(n_data->link);
+		fread(n_data->key, sizeof(char), 3, fp);
+		n_data->key[3] = '\0';
 
 		fread(&n_elem, sizeof(int), 1, fp);
-		n_data->num_vegades = n_elem;
 
-		carregar_llista(l, n_elem, fp);
-		n_data->link = l;
+		carregar_llista(n_data->link, n_elem, fp);
 		insert_node(tree, n_data);
 	}
 }
@@ -347,7 +351,6 @@ int main(int argc, char **argv){
                 fgets(str2, MAXLINE, stdin);
                 str2[strlen(str2)-1]=0;
 
-                /* Falta codi */
                 creacio_arbre(str1, str2);
 
                 break;
@@ -381,7 +384,10 @@ int main(int argc, char **argv){
 
             case 3:   // Llegir arbre de disc
 
-				/* Falta alliberar memoria */
+				if (tree != NULL){
+					delete_tree(tree);
+					free(tree);
+				}
 
                 printf("Introdueix nom del fitxer que conte l'arbre: ");
                 fgets(str1, MAXLINE, stdin);
@@ -394,9 +400,14 @@ int main(int argc, char **argv){
 				}
 				int magic, n_nodes;
 				fread(&magic, sizeof(int), 1, fp);
-				fread(&n_nodes, sizeof(int), 1, fp);
 
-				carregar_arbre(n_nodes, fp);
+				if(magic == MAGIC_NUMBER){
+					fread(&n_nodes, sizeof(int), 1, fp);
+
+					carregar_arbre(n_nodes, fp);
+				}
+				fclose(fp);
+
                 break;
 
             case 4:   // Consultar informacio de l'arbre
@@ -413,16 +424,9 @@ int main(int argc, char **argv){
                 break;
 
             case 5:   // Sortir
-
-                /* Falta codi */
                 //Alliberar memoria
-                //delete_tree(tree);
-                //free(tree);
-
-                //free(row);
-                //free(retrasoChar);
-                //free(origen);
-                //free(destino);
+                delete_tree(tree);
+                free(tree);
 
                 break;
 
