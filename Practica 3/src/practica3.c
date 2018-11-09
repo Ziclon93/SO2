@@ -95,11 +95,11 @@ void guardar_llista(list *l, FILE *fp){
 
 		// Guardem el nombre de vols
 		n_vols = item->data->num_times;
-		fwrite(&(item->data->num_times), sizeof(int), 1, fp);
+		fwrite(&n_vols, sizeof(int), 1, fp);
 
 		// Guardem el retràs
 		retras = item->data->retraso;
-		fwrite(&(item->data->retraso), sizeof(int), 1, fp);
+		fwrite(&retras, sizeof(int), 1, fp);
 
 		item = item->next;
 	}
@@ -131,6 +131,48 @@ void guardar_arbre(node *x, FILE *fp){
     if (x->right != NIL){
         guardar_arbre(x->right,fp);
     }
+}
+
+void carregar_llista(list *l, int n, FILE *fp){
+	init_list(l);
+	list_data *data = malloc(sizeof(list_data));
+	char *desti;
+	int n_vols, retras;
+	for(int i = 0; i < n; i++){
+		fread(desti, sizeof(char), 3, fp);
+		data->key = desti;
+
+		fread(&n_vols, sizeof(int), 1, fp);
+		data->num_times = n_vols;
+
+		fread(&retras, sizeof(int), 1, fp);
+		data->retraso = retras;
+
+		insert_list(l, data);
+	}
+}
+
+void carregar_arbre(int n, FILE *fp){
+	tree = (rb_tree *) malloc(sizeof(rb_tree));
+	list *l = malloc(sizeof(list));
+	node_data *n_data = malloc(sizeof(node_data));
+	n_data->key = malloc(sizeof(char)*4);
+	int n_elem;
+	char *origen;
+
+	init_tree(tree);
+
+	for(int i = 0; i < n; i++){
+		fread(origen, sizeof(char), 3, fp);
+		n_data->key = origen;
+
+		fread(&n_elem, sizeof(int), 1, fp);
+		n_data->num_vegades = n_elem;
+
+		carregar_llista(l, n_elem, fp);
+		n_data->link = l;
+		insert_node(tree, n_data);
+	}
 }
 
 int creacio_arbre(char* aeroports, char* dades){
@@ -345,8 +387,6 @@ int main(int argc, char **argv){
                 fgets(str1, MAXLINE, stdin);
                 str1[strlen(str1)-1]=0;
 
-                /* Falta codi */
-
 				fp = fopen(str1, "r");
 				if(!fp) {
 					perror("Error opening file");
@@ -356,8 +396,7 @@ int main(int argc, char **argv){
 				fread(&magic, sizeof(int), 1, fp);
 				fread(&n_nodes, sizeof(int), 1, fp);
 
-				printf("Magic number: %d\nNumero de nodes: %d\n", magic, n_nodes);
-
+				carregar_arbre(n_nodes, fp);
                 break;
 
             case 4:   // Consultar informacio de l'arbre
