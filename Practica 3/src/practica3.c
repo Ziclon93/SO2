@@ -13,6 +13,7 @@
 #define MAGIC_NUMBER 0x0133C8F9
 
 rb_tree *tree;
+FILE *fp;
 
 int menu()
 {
@@ -70,8 +71,22 @@ void recorrido(node *x){
         recorrido(x->left);
 }
 
+int calcular_numero_nodes(node *n){
+    int r = 0;
+		int l = 0;
+
+		if (n->right != NIL)
+				r = calcular_numero_nodes(n->right);
+
+		if (n->left != NIL)
+				l = calcular_numero_nodes(n->left);
+
+		return r + l + 1;
+
+}
+
+
 int creacio_arbre(char* aeroports, char* dades){
-  FILE *fp;
   char str[10000];
   char *row,*retrasoChar, *origen,*destino;
   int SIZE,retraso;
@@ -237,6 +252,19 @@ int main(int argc, char **argv){
 
                 /* Falta codi */
 
+                fp = fopen(str1, "w");
+                if(!fp) {
+                  perror("Error opening file");
+                  return(-1);
+                }
+								int mn = (int)MAGIC_NUMBER;
+                fwrite(&mn, sizeof(int), 1, fp);
+
+                int num_nodes = calcular_numero_nodes(tree->root);
+								fwrite(&num_nodes, sizeof(int), 1, fp);
+
+								printf("numero de nodos: %d", num_nodes);
+
                 break;
 
             case 3:   // Llegir arbre de disc
@@ -245,6 +273,17 @@ int main(int argc, char **argv){
                 str1[strlen(str1)-1]=0;
 
                 /* Falta codi */
+
+								fp = fopen(str1, "r");
+								if(!fp) {
+									perror("Error opening file");
+									return(-1);
+								}
+								int magic, n_nodes;
+								fread(&magic, sizeof(int), 1, fp);
+								fread(&n_nodes, sizeof(int), 1, fp);
+
+								printf("Magic number: %d\nNumero de nodes: %d\n", magic, n_nodes);
 
                 break;
 
