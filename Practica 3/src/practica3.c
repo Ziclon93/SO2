@@ -12,9 +12,6 @@
 #define MAXLINE      200
 #define MAGIC_NUMBER 0x0133C8F9
 
-rb_tree *tree;
-FILE *fp;
-
 int menu()
 {
     char str[5];
@@ -86,7 +83,7 @@ int calcular_lista_num(list *l){
 
 void guardar_llista(list *l, FILE *fp){
 	int n_vols, retras;
-	list_item *item = malloc(sizeof(list_item));
+	list_item *item;
 	item = l->first;
 
 	while(item != NULL){
@@ -94,42 +91,42 @@ void guardar_llista(list *l, FILE *fp){
 		fwrite(item->data->key, sizeof(char), 3, fp);
 
 		// Guardem el nombre de vols
-		n_vols = item->data->num_times;
-		fwrite(&n_vols, sizeof(int), 1, fp);
+		//n_vols = item->data->num_times;
+		fwrite(&(item->data->num_times), sizeof(int), 1, fp);
 
 		// Guardem el retràs
-		retras = item->data->retraso;
-		fwrite(&retras, sizeof(int), 1, fp);
+		//retras = item->data->retraso;
+		fwrite(&(item->data->retraso), sizeof(int), 1, fp);
 
 		item = item->next;
 	}
 }
 
-void guardar_node(node *x, FILE *fp){
-	int n_elements;
+void guardar_node(node_data *d, FILE *fp){
+	//int n_elements;
 	// Guardem l'origen
-	fwrite(x->data->key, sizeof(char), 3, fp);
+	fwrite(d->key, sizeof(char), 3, fp);
 
 	// Calculem i guardem el número d'elements
-	n_elements = calcular_lista_num(x->data->link);
-	fwrite(&n_elements, sizeof(int), 1, fp);
+	//n_elements = calcular_lista_num(d->link);
+	fwrite(&(d->num_vegades), sizeof(int), 1, fp);
 
 	// Guardem els elements de la llista
-	guardar_llista(x->data->link, fp);
+	guardar_llista(d->link, fp);
 
 }
 
 
-void guardar_arbre(node *x, FILE *fp){
+void guardar_arbre(node *n, FILE *fp){
 
-	if (x->left != NIL){
-        guardar_arbre(x->left,fp);
+	if (n->left != NIL){
+        guardar_arbre(n->left,fp);
     }
 
-	guardar_node(x, fp);
+	guardar_node(n->data, fp);
 
-    if (x->right != NIL){
-        guardar_arbre(x->right,fp);
+    if (n->right != NIL){
+        guardar_arbre(n->right,fp);
     }
 }
 
@@ -154,12 +151,9 @@ void carregar_llista(list *l, int n, FILE *fp){
 	}
 }
 
-void carregar_arbre(int n, FILE *fp){
-	tree = (rb_tree *) malloc(sizeof(rb_tree));
+void carregar_arbre(rb_tree *tree, int n, FILE *fp){
 	node_data *n_data;;
 	int n_elem;
-
-	init_tree(tree);
 
 	for(int i = 0; i < n; i++){
 
@@ -179,7 +173,7 @@ void carregar_arbre(int n, FILE *fp){
 	}
 }
 
-int creacio_arbre(char* aeroports, char* dades){
+int creacio_arbre(char *aeroports, char *dades, rb_tree  *tree){
   char str[10000];
   char *row,*retrasoChar, *origen,*destino;
   int SIZE,retraso;
@@ -305,13 +299,11 @@ int creacio_arbre(char* aeroports, char* dades){
   fclose(fp);
 }
 
-void calcular_retard(char *vol){
+void calcular_retard(node_data *node){
 		// Calcular retards
-		node_data *node = malloc(sizeof(node_data));
 		list_item *item = malloc(sizeof(list_item));
 		int media;
 
-		node = find_node(tree, vol);
 		item = node->link->first;
 
 		while(item != NULL){
@@ -333,6 +325,8 @@ void calcular_retard(char *vol){
 int main(int argc, char **argv){
     char str1[MAXLINE], str2[MAXLINE];
     int opcio;
+	rb_tree *tree;
+	FILE *fp;
 
     if (argc != 1)
         printf("Opcions de la linia de comandes ignorades\n");
@@ -351,7 +345,7 @@ int main(int argc, char **argv){
                 fgets(str2, MAXLINE, stdin);
                 str2[strlen(str2)-1]=0;
 
-                creacio_arbre(str1, str2);
+                creacio_arbre(str1, str2, tree);
 
                 break;
 
@@ -364,7 +358,7 @@ int main(int argc, char **argv){
 		            fgets(str1, MAXLINE, stdin);
 		            str1[strlen(str1)-1]=0;
 
-					fp = fopen(str1, "wb");
+					fp = fopen(str1, "w");
 		            if(!fp) {
 		             	perror("Error opening file");
 		              	return(-1);
@@ -403,8 +397,9 @@ int main(int argc, char **argv){
 
 				if(magic == MAGIC_NUMBER){
 					fread(&n_nodes, sizeof(int), 1, fp);
-
-					carregar_arbre(n_nodes, fp);
+					tree = (rb_tree *) malloc(sizeof(rb_tree));
+					init_tree(tree);
+					carregar_arbre(tree, n_nodes, fp);
 				}
 				fclose(fp);
 
@@ -416,7 +411,8 @@ int main(int argc, char **argv){
                 str1[strlen(str1)-1]=0;
 
 				if (strlen(str1) != 0)
-				calcular_retard(str1);
+
+				calcular_retard(find_node(tree, str1));
 				else{
 					/* Aeroport amb més destins */
 				}
