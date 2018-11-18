@@ -9,6 +9,7 @@
 #include <sys/time.h>
 
 #include "ficheros-csv.h"
+#include <pthread.h>
 
 /**
  *
@@ -46,7 +47,7 @@ rb_tree *create_tree(char *str_airports, char *str_dades)
     par->fp = fp;
     par->tree = tree;
 
-    pthread_create(&ntid, NULL, read_airports, (void *) par);
+    pthread_create(&ntid, NULL, (void *)read_airports, (void *)par);
     if (err != 0) {
       printf("no puc crear el fil.\n");
       exit(1);
@@ -78,7 +79,7 @@ rb_tree *create_tree(char *str_airports, char *str_dades)
  */
 
 //void read_airports(rb_tree *tree, FILE *fp){
-void read_airports(*arg){
+void read_airports(void * arg){
     struct parametres *par = (struct parametres *) arg;
     int i, num_airports;
     char line[MAXCHAR];
@@ -241,7 +242,7 @@ static int extract_fields_airport(char *line, flight_information *fi) {
 
 void read_airports_data(rb_tree *tree, FILE *fp) {
     char line[MAXCHAR];
-    int invalid;
+    int invalid,i;
 
     flight_information fi;
 
@@ -268,7 +269,7 @@ void read_airports_data(rb_tree *tree, FILE *fp) {
 
     // Creamos los hilos
     for(i = 0; i < NUMTHREADS; i++)
-       pthread_create(&(vt[i]), NULL, th_read_airports_data, (void *) par);
+       pthread_create(&(vt[i]), NULL, (void *)th_read_airports_data, (void *) par);
 
     // Hacemos join a los hilos
     for(i = 0; i < NUMTHREADS; i++)
@@ -297,7 +298,11 @@ void th_read_airports_data(void *arg){
     list_data *l_data;
 
     struct parametres *par = (struct parametres *) arg;
-    node_data *n_data;
+
+    rb_tree *tree = par->tree;
+    FILE *fp = par->fp;
+
+
 
     /*  TO DO
 

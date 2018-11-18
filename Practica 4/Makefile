@@ -1,30 +1,32 @@
-# This is the makefile that generates the executable
+main: main.o red-black-tree.o linked-list.o estadisticas.o ficheros-csv.o read-write-tree.o
+	gcc -o main main.o red-black-tree.o linked-list.o estadisticas.o ficheros-csv.o read-write-tree.o
 
-# Files to compile
-FILES_C = main.c red-black-tree.c linked-list.c ficheros-csv.c estadisticas.c read-write-tree.c 
 
-# Exectuable to generate
-TARGET = main
+main.o: main.c red-black-tree.h linked-list.h estadisticas.h ficheros-csv.h read-write-tree.h
+	gcc -c main.c
 
-# Compilation options
-#CFLAGS = -Wall -Werror -g -ansi -pedantic
-CFLAGS = -Wall -Werror -O
+red-black-tree.o: red-black-tree.c red-black-tree.h
+	gcc -c red-black-tree.c
 
-# Linker options 
-LFLAGS = -lm
 
-# There is no need to change the instructions below this
-# line. Change if you really know what you are doing.
+linked-list.o: linked-list.c linked-list.h
+	gcc -c linked-list.c
 
-FILES_O = $(subst .c,.o,$(FILES_C))
+estadisticas.o: estadisticas.c estadisticas.h
+	gcc -c estadisticas.c
 
-$(TARGET): $(FILES_O) Makefile
-	gcc $(FILES_O) -o $(TARGET) $(LFLAGS) 
+ficheros-csv.o: ficheros-csv.c ficheros-csv.h
+	gcc -c ficheros-csv.c
 
-%.o: %.c Makefile
-	gcc $(CFLAGS) -c $<
+read-write-tree.o: read-write-tree.c read-write-tree.h
+	gcc -c read-write-tree.c
 
-all: $(TARGET) 
+
+
+
+run:	./main
+	./main
+
 
 clean:
-	/bin/rm $(FILES_O) $(TARGET) 
+	rm main.o main red-black-tree.o linked-list.o  estadisticas.o ficheros-csv.o read-write-tree.o
