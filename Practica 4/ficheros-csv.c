@@ -11,6 +11,8 @@
 #include "ficheros-csv.h"
 #include <pthread.h>
 
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
 /**
  *
  * Esta funcion crea el arbol a partir de los datos de los aeropuertos y de los ficheros de retardo
@@ -105,6 +107,8 @@ void read_airports(void * arg){
 
         /* Copiamos los datos al nodo */
         n_data->key = malloc(sizeof(char) * 4);
+        pthread_mutex_t n_mutex = PTHREAD_MUTEX_INITIALIZER;
+        n_data->mutex = n_mutex;
         strcpy(n_data->key, line);
 
         /* Inicializamos la lista */
@@ -288,21 +292,17 @@ void read_airports_data(rb_tree *tree, FILE *fp) {
 }
 
 
+
 void th_read_airports_data(void *arg){
     char line[MAXCHAR];
     int invalid, currentLine;
 
     flight_information fi;
 
-    node_data *n_data;
-    list_data *l_data;
 
     struct parametres *par = (struct parametres *) arg;
 
-    rb_tree *tree = par->tree;
     FILE *fp = par->fp;
-
-
 
     /*  TO DO
 
@@ -321,35 +321,63 @@ void th_read_airports_data(void *arg){
     */
 
     currentLine = 0;
+
+    flight_information *list_fi = malloc(sizeof(fi)* NUMLINES);
+
+    pthread_mutex_lock(&mutex);
+
     while ((currentLine < NUMLINES) && (fgets(line, MAXCHAR, fp) != NULL)){
         invalid = extract_fields_airport(line, &fi);
 
         if (!invalid) {
-            n_data = find_node(tree, fi.origin);
-
-            if (n_data) {
-                l_data = find_list(n_data->l, fi.destination);
-
-                if (l_data) {
-                    l_data->numero_vuelos += 1;
-                    l_data->retardo_total += fi.delay;
-                } else {
-                    l_data = malloc(sizeof(list_data));
-
-                    l_data->key = malloc(sizeof(char) * 4);
-                    strcpy(l_data->key, fi.destination);
-
-                    l_data->numero_vuelos = 1;
-                    l_data->retardo_total = fi.delay;
-
-                    insert_list(n_data->l, l_data);
-                }
-
-            } else {
-                printf("ERROR: aeropuerto %s no encontrado en el arbol.\n", fi.origin);
-                exit(1);
-            }
+            list_fi[currentLine] = fi;
         }
         currentLine++;
     }
+    pthread_mutex_unlock(&mutex);
+
+    insert_node_trees(list_fi, par);
+
+}
+
+void insert_node_trees(flight_information *fi_list, struct parametres *par){
+
+    int currentLine = 0; 
+    node_data *n_data;
+    list_data *l_data;
+
+
+    rb_tree *tree = par->tree;
+
+    while ( currentLine < NUMLINES){
+        printf("-%s- current line -%d-\n", fi_list[currentLine].origin, currentLine);
+        n_data = find_node(tree, fi_list[currentLine].origin);
+        if (n_data) {
+
+            pthread_mutex_lock(&(n_data->mutex));
+            l_data = find_list(n_data->l, fi_list[currentLine].destination);
+
+            if (l_data) {
+                l_data->numero_vuelos += 1;
+                l_data->retardo_total += fi_list[currentLine].delay;
+            } else {
+                l_data = malloc(sizeof(list_data));
+
+                l_data->key = malloc(sizeof(char) * 4);
+                strcpy(l_data->key, fi_list[currentLine].destination);
+
+                l_data->numero_vuelos = 1;
+                l_data->retardo_total = fi_list[currentLine].delay;
+
+                insert_list(n_data->l, l_data);
+            }
+            pthread_mutex_unlock(&(n_data->mutex));
+
+        } else {
+            printf("ERROR: aeropuerto %s no encontrado en el arbol.\n", fi_list[currentLine].origin);
+            exit(1);
+        }
+        currentLine++;
+    }
+    
 }
