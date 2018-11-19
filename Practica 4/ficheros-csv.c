@@ -338,6 +338,8 @@ void th_read_airports_data(void *arg){
 
     insert_node_trees(list_fi, par);
 
+    free(list_fi);
+
 }
 
 void insert_node_trees(flight_information *fi_list, struct parametres *par){
@@ -349,7 +351,7 @@ void insert_node_trees(flight_information *fi_list, struct parametres *par){
 
     rb_tree *tree = par->tree;
 
-    while ( currentLine < NUMLINES){
+    while ( currentLine < NUMLINES && (strlen(fi_list[currentLine].origin) ==3)){
         printf("-%s- current line -%d-\n", fi_list[currentLine].origin, currentLine);
         n_data = find_node(tree, fi_list[currentLine].origin);
         if (n_data) {
