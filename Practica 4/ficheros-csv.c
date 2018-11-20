@@ -12,6 +12,223 @@
 #include <pthread.h>
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+int waiting = 0;
+int N = 1;
+
+int extract_fields_airport(char *line, flight_information *fi) {
+
+    /*Recorre la linea por caracteres*/
+    char caracter;
+    /* i sirve para recorrer la linea
+     * iterator es para copiar el substring de la linea a char
+     * coma_count es el contador de comas
+     */
+    int i, iterator, coma_count;
+    /* start indica donde empieza el substring a copiar
+     * end indica donde termina el substring a copiar
+     * len indica la longitud del substring
+     */
+    int start, end, len;
+    /* invalid nos permite saber si todos los campos son correctos
+     * 1 hay error, 0 no hay error pero no hemos terminado
+     */
+    int invalid = 0;
+    /*
+     * eow es el caracter de fin de palabra
+     */
+    char eow = '\0';
+    /*
+     * contenedor del substring a copiar
+     */
+    char *word;
+    /*
+     * Inicializamos los valores de las variables
+     */
+    start = 0;
+    end = -1;
+    i = 0;
+    coma_count = 0;
+    /*
+     * Empezamos a contar comas
+     */
+    do {
+        caracter = line[i++];
+        if (caracter == ',') {
+            coma_count ++;
+            /*
+             * Cogemos el valor de end
+             */
+            end = i;
+            /*
+             * Si es uno de los campos que queremos procedemos a copiar el substring
+             */
+            if(coma_count == ATRASO_LLEGADA_AEROPUERTO ||
+                    coma_count == AEROPUERTO_ORIGEN ||
+                    coma_count == AEROPUERTO_DESTINO){
+                /*
+                 * Calculamos la longitud, si es mayor que 1 es que tenemos
+                 * algo que copiar
+                 */
+                len = end - start;
+                if (len > 1) {
+                    /*
+                     * Alojamos memoria y copiamos el substring
+                     */
+                    word =(char*)malloc(sizeof(char)*(len));
+                    for(iterator = start; iterator < end-1; iterator ++){
+                        word[iterator-start] = line[iterator];
+                    }
+                    /*
+                     * Introducimos el caracter de fin de palabra
+                     */
+                    word[iterator-start] = eow;
+                    /*
+                     * Comprobamos que el campo no sea NA (Not Available)
+                     */
+                    if (strcmp("NA", word) == 0)
+                        invalid = 1;
+                    else {
+                        switch (coma_count) {
+                            case ATRASO_LLEGADA_AEROPUERTO:
+                                fi->delay = atoi(word);
+                                break;
+                            case AEROPUERTO_ORIGEN:
+                                strcpy(fi->origin, word);
+                                break;
+                            case AEROPUERTO_DESTINO:
+                                strcpy(fi->destination, word);
+                                break;
+                            default:
+                                printf("ERROR in coma_count\n");
+                                exit(1);
+                        }
+                    }
+
+                    free(word);
+
+                } else {
+                    /*
+                     * Si el campo esta vacio invalidamos la linea entera
+                     */
+
+                    invalid = 1;
+                }
+            }
+            start = end;
+        }
+    } while (caracter && invalid==0);
+
+    return invalid;
+}
+
+void insert_node_trees(char *origin,char *destination, int delay, struct parametres *par){
+
+    int currentLine = 0; 
+    node_data *n_data;
+    list_data *l_data;
+
+    rb_tree *tree = par->tree;
+
+    if (strlen(origin) >=3){
+        printf("-%s-\n ", origin);
+        n_data = find_node(tree, origin);
+
+        if (n_data) {
+
+            pthread_mutex_lock(&(n_data->mutex));
+
+            l_data = find_list(n_data->l, destination);
+
+            if (l_data) {
+                l_data->numero_vuelos += 1;
+                l_data->retardo_total += delay;
+            } else {
+                l_data = malloc(sizeof(list_data));
+
+                l_data->key = malloc(sizeof(char) * 4);
+                strcpy(l_data->key, destination);
+
+                l_data->numero_vuelos = 1;
+                l_data->retardo_total = delay;
+
+                insert_list(n_data->l, l_data);
+            }
+            pthread_mutex_unlock(&(n_data->mutex));
+
+        } else {
+            printf("ERROR: aeropuerto %s no encontrado en el arbol.\n", origin);
+            exit(1);
+        }
+        currentLine++;
+    }
+    
+}
+
+void *th_read_airports_data(void *arg){
+    char line[MAXCHAR];
+    int invalid, currentLine,i;
+
+    flight_information fi;
+
+
+    struct parametres *par = (struct parametres *) arg;
+
+    FILE *fp = par->fp;
+
+    /*  TO DO
+
+    El profe dijo que en vez de hacerlo todo en el while, hay que utilizar una
+    matriz, cada fila de la matriz sera una fila del fichero, cada columna un
+    dato que coges con la funcion extract_fields_airport.
+    Hay que averiguar como se hace exactamente.
+
+    Cuando interactuas con el fichero hay que bloquearlo para que los otros hilos
+    no interfieran, y desbloquearlo al acabar.
+
+    Después el hilo va procesando los datos y metiendolos en el arbol, cada nodo
+    del arbol necesita un mutex para bloquearlo y que no se acceda desde diferentes
+    hilos a la vez.
+
+    */
+
+    currentLine = 0;
+
+    char **list_fi = malloc(NUMLINES);
+
+
+    pthread_mutex_lock(&mutex);
+
+    printf("SOY EL HILO : -%d-\n" , N);
+    N++;
+
+
+    while ((currentLine < NUMLINES) && (fgets(line, MAXCHAR, fp) != NULL)){
+        line[strlen(line)-1] = '\0';
+        //printf("lectura : -%s-\n",line);
+        list_fi[currentLine] = malloc(sizeof(char)* MAXCHAR);
+        strcpy(list_fi[currentLine],line);
+        currentLine++;
+    }
+    pthread_mutex_unlock(&mutex);
+    waiting = 0;
+
+    for(i=0;i<NUMLINES;i++){
+
+        invalid = extract_fields_airport(list_fi[i], &fi);
+
+        if (!invalid) {
+            insert_node_trees(fi.origin,fi.destination,fi.delay, par);
+            //free(list_fi[i]);
+            
+        }
+        
+    }
+
+    //free(list_fi);
+
+}
+
 
 /**
  *
@@ -125,117 +342,7 @@ void read_airports(void * arg){
 }
 
 
-/**
- * Función que permite leer todos los campos de la línea de vuelo: origen,
- * destino, retardo.
- *
- */
 
-static int extract_fields_airport(char *line, flight_information *fi) {
-
-    /*Recorre la linea por caracteres*/
-    char caracter;
-    /* i sirve para recorrer la linea
-     * iterator es para copiar el substring de la linea a char
-     * coma_count es el contador de comas
-     */
-    int i, iterator, coma_count;
-    /* start indica donde empieza el substring a copiar
-     * end indica donde termina el substring a copiar
-     * len indica la longitud del substring
-     */
-    int start, end, len;
-    /* invalid nos permite saber si todos los campos son correctos
-     * 1 hay error, 0 no hay error pero no hemos terminado
-     */
-    int invalid = 0;
-    /*
-     * eow es el caracter de fin de palabra
-     */
-    char eow = '\0';
-    /*
-     * contenedor del substring a copiar
-     */
-    char *word;
-    /*
-     * Inicializamos los valores de las variables
-     */
-    start = 0;
-    end = -1;
-    i = 0;
-    coma_count = 0;
-    /*
-     * Empezamos a contar comas
-     */
-    do {
-        caracter = line[i++];
-        if (caracter == ',') {
-            coma_count ++;
-            /*
-             * Cogemos el valor de end
-             */
-            end = i;
-            /*
-             * Si es uno de los campos que queremos procedemos a copiar el substring
-             */
-            if(coma_count == ATRASO_LLEGADA_AEROPUERTO ||
-                    coma_count == AEROPUERTO_ORIGEN ||
-                    coma_count == AEROPUERTO_DESTINO){
-                /*
-                 * Calculamos la longitud, si es mayor que 1 es que tenemos
-                 * algo que copiar
-                 */
-                len = end - start;
-                if (len > 1) {
-                    /*
-                     * Alojamos memoria y copiamos el substring
-                     */
-                    word =(char*)malloc(sizeof(char)*(len));
-                    for(iterator = start; iterator < end-1; iterator ++){
-                        word[iterator-start] = line[iterator];
-                    }
-                    /*
-                     * Introducimos el caracter de fin de palabra
-                     */
-                    word[iterator-start] = eow;
-                    /*
-                     * Comprobamos que el campo no sea NA (Not Available)
-                     */
-                    if (strcmp("NA", word) == 0)
-                        invalid = 1;
-                    else {
-                        switch (coma_count) {
-                            case ATRASO_LLEGADA_AEROPUERTO:
-                                fi->delay = atoi(word);
-                                break;
-                            case AEROPUERTO_ORIGEN:
-                                strcpy(fi->origin, word);
-                                break;
-                            case AEROPUERTO_DESTINO:
-                                strcpy(fi->destination, word);
-                                break;
-                            default:
-                                printf("ERROR in coma_count\n");
-                                exit(1);
-                        }
-                    }
-
-                    free(word);
-
-                } else {
-                    /*
-                     * Si el campo esta vacio invalidamos la linea entera
-                     */
-
-                    invalid = 1;
-                }
-            }
-            start = end;
-        }
-    } while (caracter && invalid==0);
-
-    return invalid;
-}
 
 /**
  *
@@ -271,9 +378,11 @@ void read_airports_data(rb_tree *tree, FILE *fp) {
     par->fp = fp;
     par->tree = tree;
 
+    waiting = 0;
     // Creamos los hilos
-    for(i = 0; i < NUMTHREADS; i++)
+    for(i = 0; i < NUMTHREADS; i++){
        pthread_create(&(vt[i]), NULL, (void *)th_read_airports_data, (void *) par);
+    }
 
     // Hacemos join a los hilos
     for(i = 0; i < NUMTHREADS; i++)
@@ -288,98 +397,9 @@ void read_airports_data(rb_tree *tree, FILE *fp) {
             (double) (tv2.tv_sec - tv1.tv_sec));
 
 
-    free(par);
 }
 
 
 
-void th_read_airports_data(void *arg){
-    char line[MAXCHAR];
-    int invalid, currentLine;
-
-    flight_information fi;
 
 
-    struct parametres *par = (struct parametres *) arg;
-
-    FILE *fp = par->fp;
-
-    /*  TO DO
-
-    El profe dijo que en vez de hacerlo todo en el while, hay que utilizar una
-    matriz, cada fila de la matriz sera una fila del fichero, cada columna un
-    dato que coges con la funcion extract_fields_airport.
-    Hay que averiguar como se hace exactamente.
-
-    Cuando interactuas con el fichero hay que bloquearlo para que los otros hilos
-    no interfieran, y desbloquearlo al acabar.
-
-    Después el hilo va procesando los datos y metiendolos en el arbol, cada nodo
-    del arbol necesita un mutex para bloquearlo y que no se acceda desde diferentes
-    hilos a la vez.
-
-    */
-
-    currentLine = 0;
-
-    flight_information *list_fi = malloc(sizeof(fi)* NUMLINES);
-
-    pthread_mutex_lock(&mutex);
-
-    while ((currentLine < NUMLINES) && (fgets(line, MAXCHAR, fp) != NULL)){
-        invalid = extract_fields_airport(line, &fi);
-
-        if (!invalid) {
-            list_fi[currentLine] = fi;
-        }
-        currentLine++;
-    }
-    pthread_mutex_unlock(&mutex);
-
-    insert_node_trees(list_fi, par);
-
-    free(list_fi);
-
-}
-
-void insert_node_trees(flight_information *fi_list, struct parametres *par){
-
-    int currentLine = 0; 
-    node_data *n_data;
-    list_data *l_data;
-
-
-    rb_tree *tree = par->tree;
-
-    while ( currentLine < NUMLINES && (strlen(fi_list[currentLine].origin) ==3)){
-        printf("-%s- current line -%d-\n", fi_list[currentLine].origin, currentLine);
-        n_data = find_node(tree, fi_list[currentLine].origin);
-        if (n_data) {
-
-            pthread_mutex_lock(&(n_data->mutex));
-            l_data = find_list(n_data->l, fi_list[currentLine].destination);
-
-            if (l_data) {
-                l_data->numero_vuelos += 1;
-                l_data->retardo_total += fi_list[currentLine].delay;
-            } else {
-                l_data = malloc(sizeof(list_data));
-
-                l_data->key = malloc(sizeof(char) * 4);
-                strcpy(l_data->key, fi_list[currentLine].destination);
-
-                l_data->numero_vuelos = 1;
-                l_data->retardo_total = fi_list[currentLine].delay;
-
-                insert_list(n_data->l, l_data);
-            }
-            pthread_mutex_unlock(&(n_data->mutex));
-
-        } else {
-            printf("ERROR: aeropuerto %s no encontrado en el arbol.\n", fi_list[currentLine].origin);
-            exit(1);
-        }
-        currentLine++;
-    }
-    
-}
