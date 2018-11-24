@@ -12,7 +12,7 @@
 #include <pthread.h>
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+
 int waiting = 0;
 int N = 1;
 
@@ -131,13 +131,12 @@ void insert_node_trees(char *origin,char *destination, int delay, struct paramet
     rb_tree *tree = par->tree;
 
     if (strlen(origin) >=3){
-        printf("-%s-\n ", origin);
+
         n_data = find_node(tree, origin);
 
         if (n_data) {
 
             pthread_mutex_lock(&(n_data->mutex));
-
             l_data = find_list(n_data->l, destination);
 
             if (l_data) {
@@ -149,7 +148,7 @@ void insert_node_trees(char *origin,char *destination, int delay, struct paramet
                 l_data->key = malloc(sizeof(char) * 4);
                 strcpy(l_data->key, destination);
 
-                l_data->numero_vuelos = 1;
+                l_data->numero_vuelos = 1;  
                 l_data->retardo_total = delay;
 
                 insert_list(n_data->l, l_data);
@@ -194,7 +193,7 @@ void *th_read_airports_data(void *arg){
 
     currentLine = 0;
 
-    char **list_fi = malloc(NUMLINES);
+    flight_information *list_fi = malloc(sizeof(flight_information)*NUMLINES);
 
 
     pthread_mutex_lock(&mutex);
@@ -204,31 +203,79 @@ void *th_read_airports_data(void *arg){
 
 
     while ((currentLine < NUMLINES) && (fgets(line, MAXCHAR, fp) != NULL)){
-        line[strlen(line)-1] = '\0';
-        //printf("lectura : -%s-\n",line);
-        list_fi[currentLine] = malloc(sizeof(char)* MAXCHAR);
-        strcpy(list_fi[currentLine],line);
-        currentLine++;
+        invalid = extract_fields_airport(line,&fi);
+
+        if (!invalid){
+            list_fi[currentLine] = fi;
+            currentLine++;
+        }
     }
     pthread_mutex_unlock(&mutex);
-    waiting = 0;
 
-    for(i=0;i<NUMLINES;i++){
+    currentLine = 0;
 
-        invalid = extract_fields_airport(list_fi[i], &fi);
-
-        if (!invalid) {
-            insert_node_trees(fi.origin,fi.destination,fi.delay, par);
-            //free(list_fi[i]);
-            
-        }
+    while((currentLine < NUMLINES) && (strlen(list_fi[currentLine].origin)==3)){
+        printf(" %d \n", currentLine);
         
-    }
+        insert_node_trees(list_fi[currentLine].origin,list_fi[currentLine].destination, list_fi[currentLine].delay, par);
 
-    //free(list_fi);
+        currentLine++;
+    }
+        
+
+    free(list_fi);
 
 }
 
+
+/**
+ *
+ * Esta funcion lee la lista de los aeropuertos y crea el arbol
+ *
+ */
+
+//void read_airports(rb_tree *tree, FILE *fp){
+void read_airports(void * arg){
+    struct parametres *par = (struct parametres *) arg;
+    int i, num_airports;
+    char line[MAXCHAR];
+
+    /*
+     * eow es el caracter de fin de palabra
+     */
+    char eow = '\0';
+
+    node_data *n_data;
+
+    fgets(line, 100, par->fp);
+    num_airports = atoi(line);
+
+    i = 0;
+    while (i < num_airports)
+    {
+        fgets(line, 100, par->fp);
+        line[3] = eow;
+
+        /* Reservamos memoria para el nodo */
+        n_data = malloc(sizeof(node_data));
+
+        /* Copiamos los datos al nodo */
+        n_data->key = malloc(sizeof(char) * 4);
+        pthread_mutex_init(&(n_data->mutex), NULL);
+        strcpy(n_data->key, line);
+
+        /* Inicializamos la lista */
+        n_data->l = malloc(sizeof(list));
+        init_list(n_data->l);
+
+        /* Suponemos que los nodos son unicos, no hace falta
+         * comprobar si ya existen previamente.
+         */
+        insert_node(par->tree, n_data);
+
+        i++;
+    }
+}
 
 /**
  *
@@ -267,6 +314,7 @@ rb_tree *create_tree(char *str_airports, char *str_dades)
     par->tree = tree;
 
     pthread_create(&ntid, NULL, (void *)read_airports, (void *)par);
+
     if (err != 0) {
       printf("no puc crear el fil.\n");
       exit(1);
@@ -288,57 +336,6 @@ rb_tree *create_tree(char *str_airports, char *str_dades)
     fclose(fp);
 
     return tree;
-}
-
-
-/**
- *
- * Esta funcion lee la lista de los aeropuertos y crea el arbol
- *
- */
-
-//void read_airports(rb_tree *tree, FILE *fp){
-void read_airports(void * arg){
-    struct parametres *par = (struct parametres *) arg;
-    int i, num_airports;
-    char line[MAXCHAR];
-
-    /*
-     * eow es el caracter de fin de palabra
-     */
-    char eow = '\0';
-
-    node_data *n_data;
-
-    fgets(line, 100, par->fp);
-    num_airports = atoi(line);
-
-    i = 0;
-    while (i < num_airports)
-    {
-        fgets(line, 100, par->fp);
-        line[3] = eow;
-
-        /* Reservamos memoria para el nodo */
-        n_data = malloc(sizeof(node_data));
-
-        /* Copiamos los datos al nodo */
-        n_data->key = malloc(sizeof(char) * 4);
-        pthread_mutex_t n_mutex = PTHREAD_MUTEX_INITIALIZER;
-        n_data->mutex = n_mutex;
-        strcpy(n_data->key, line);
-
-        /* Inicializamos la lista */
-        n_data->l = malloc(sizeof(list));
-        init_list(n_data->l);
-
-        /* Suponemos que los nodos son unicos, no hace falta
-         * comprobar si ya existen previamente.
-         */
-        insert_node(par->tree, n_data);
-
-        i++;
-    }
 }
 
 
@@ -381,7 +378,7 @@ void read_airports_data(rb_tree *tree, FILE *fp) {
     waiting = 0;
     // Creamos los hilos
     for(i = 0; i < NUMTHREADS; i++){
-       pthread_create(&(vt[i]), NULL, (void *)th_read_airports_data, (void *) par);
+       pthread_create(&(vt[i]), NULL, th_read_airports_data, (void *) par);
     }
 
     // Hacemos join a los hilos
