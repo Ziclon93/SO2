@@ -124,7 +124,7 @@ int extract_fields_airport(char *line, flight_information *fi) {
 
 void insert_node_trees(char *origin,char *destination, int delay, struct parametres *par){
 
-    int currentLine = 0; 
+    int currentLine = 0;
     node_data *n_data;
     list_data *l_data;
 
@@ -148,7 +148,7 @@ void insert_node_trees(char *origin,char *destination, int delay, struct paramet
                 l_data->key = malloc(sizeof(char) * 4);
                 strcpy(l_data->key, destination);
 
-                l_data->numero_vuelos = 1;  
+                l_data->numero_vuelos = 1;
                 l_data->retardo_total = delay;
 
                 insert_list(n_data->l, l_data);
@@ -161,7 +161,7 @@ void insert_node_trees(char *origin,char *destination, int delay, struct paramet
         }
         currentLine++;
     }
-    
+
 }
 
 void *th_read_airports_data(void *arg){
@@ -215,13 +215,13 @@ void *th_read_airports_data(void *arg){
     currentLine = 0;
 
     while((currentLine < NUMLINES) && (strlen(list_fi[currentLine].origin)==3)){
-        printf(" %d \n", currentLine);
-        
+        //printf(" %d \n", currentLine);
+
         insert_node_trees(list_fi[currentLine].origin,list_fi[currentLine].destination, list_fi[currentLine].delay, par);
 
         currentLine++;
     }
-        
+
 
     free(list_fi);
 
@@ -334,7 +334,7 @@ rb_tree *create_tree(char *str_airports, char *str_dades)
     /* Se leen los datos y se introducen en el arbol */
     read_airports_data(tree, fp);
     fclose(fp);
-
+    free(par);
     return tree;
 }
 
@@ -393,10 +393,5 @@ void read_airports_data(rb_tree *tree, FILE *fp) {
             (double) (tv2.tv_usec - tv1.tv_usec) / 1000000 +
             (double) (tv2.tv_sec - tv1.tv_sec));
 
-
+    free(par);
 }
-
-
-
-
-
