@@ -28,6 +28,37 @@ struct parametres {
   FILE *fp;
 };
 
+typedef struct read_params{
+    FILE *fp;
+
+    int sending;
+
+    struct buffer *buf;
+	
+} read_params;
+
+typedef struct process_params{
+    rb_tree *tree;
+
+    int sending;
+    int end;
+
+    struct buffer *buf;
+} process_params;
+
+struct cell{
+
+	char str[500];
+	int size;
+
+};
+
+struct buffer{
+	int size;
+
+	struct cell *cell[NUMTHREADS];
+};
+
 
 
 rb_tree *create_tree(char *str_airports, char *str_dades);

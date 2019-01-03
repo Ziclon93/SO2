@@ -13,7 +13,14 @@
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
-int waiting = 0;
+int waiting = 0, count = 0 , send = 1,r = 0,w = 0;
+
+//Mutex que comparten el Productor y Consumidor
+pthread_mutex_t mutex_PC = PTHREAD_MUTEX_INITIALIZER;
+
+//La condicion del Productor y el Consumidor.
+pthread_cond_t condP, condC;
+
 int N = 1;
 
 int extract_fields_airport(char *line, flight_information *fi) {
@@ -257,6 +264,165 @@ void read_airports(void * arg){
     }
 }
 
+void *productor(void *arg){
+
+    char line[MAXCHAR];
+    struct read_params *par = (struct leer *) arg;
+
+    //generar data (leer)
+    pthread_mutex_lock(&mutex_PC);
+
+
+    if(count == NUMTHREADS){
+         pthread_cond_wait(&condP, &mutex_PC);
+    }
+
+    //Copia dada al buffer;
+
+    if (fgets (line, MAXCHAR, par->fp)!= NULL){
+        strcpy(par->buf->cell[w]->str, line);
+    }
+
+    if (feof(par->fp)){
+        par->sending = 0;
+        send = 0;
+    }
+
+    w = (w + 1) % NUMTHREADS;
+    count++;
+    pthread_cond_broadcast(&condC);
+    pthread_mutex_unlock(&mutex_PC);
+    
+}
+
+void *consumidor(void *arg){
+    int invalid;
+
+    flight_information fi;
+
+    node_data *n_data;
+    list_data *l_data;
+
+
+    struct process_params *par = (struct processar *) arg;
+
+    char * num_lines;
+
+    pthread_mutex_lock(&mutex_PC);
+    while(count == 0){
+        pthread_cond_wait(&condC, &mutex_PC);
+    }
+    //Copia buffer a data
+    if (send){
+        num_lines = malloc(sizeof(char)*(strlen(par->buf->cell[r]->str) + 1));
+        num_lines[strlen(par->buf->cell[r]->str) - 1] = '\0';
+        strcpy(num_lines,par->buf->cell[r]->str);
+        r = (r + 1) % NUMTHREADS;
+        count--;
+        pthread_cond_broadcast(&condP);
+    }
+    //}
+    else{
+        par->end = 0;
+
+    }
+    
+    pthread_mutex_unlock(&mutex_PC);
+
+    //Escribir nodos
+
+
+    if (send){
+
+        invalid = extract_fields_airport(num_lines, &fi);
+        
+        if (!invalid) {
+            n_data = find_node(par->tree, fi.origin);            
+
+            if (n_data) {
+
+                pthread_mutex_lock(&n_data->mutex);
+
+                l_data = find_list(n_data->l, fi.destination);
+
+                if (l_data) {
+
+                    l_data->numero_vuelos += 1;
+                    l_data->retardo_total += fi.delay;
+                   
+
+                } else {
+
+
+                    l_data = malloc(sizeof(list_data));
+                    l_data->key = malloc(sizeof(char) * 4);
+                    strcpy(l_data->key, fi.destination);
+
+                    l_data->numero_vuelos = 1;
+                    l_data->retardo_total = fi.delay; 
+                    
+                    insert_list(n_data->l, l_data);
+
+
+                }
+
+                pthread_mutex_unlock(&n_data->mutex);
+                
+
+            } else {
+                printf("ERROR: aeropuerto %s no encontrado en el arbol.\n", fi.origin);
+                exit(1);
+            }
+        }
+        
+        free(num_lines);
+        
+    }
+
+}
+
+
+
+
+// Hacemos llamada a los consumidores
+
+void *procesar_fichero(void *arg){
+    
+    pthread_t tid;
+
+    struct process_params *par = (struct processar *) arg;
+
+    while (par->end == 1 && send){
+
+	    pthread_create(&tid,NULL,consumidor,(void * )arg);
+
+	    pthread_join(tid,NULL);
+
+    }
+
+    printf("CONSUMIDOR HA ACABADO\n");
+}
+
+//Llamadas a los productores
+
+void *leer_fichero(void *arg){
+
+	pthread_t tid;
+
+	struct read_params *par = (struct leer *) arg;
+
+	while (!feof(par->fp) && par->sending == 1){
+
+		pthread_create(&tid,NULL,productor,(void * )arg);
+		pthread_join(tid,NULL);
+
+	}
+
+	printf("PRODUCTOR HA ACABADO\n");
+	
+}
+
+
 /**
  *
  * Esta funcion crea el arbol a partir de los datos de los aeropuertos y de los ficheros de retardo
@@ -317,6 +483,9 @@ rb_tree *create_tree(char *str_airports, char *str_dades)
 
     return tree;
 }
+
+
+
 
 
 
