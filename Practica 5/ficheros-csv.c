@@ -18,8 +18,14 @@ int waiting = 0, count = 0 , send = 1,r = 0,w = 0;
 //Mutex que comparten el Productor y Consumidor
 pthread_mutex_t mutex_PC = PTHREAD_MUTEX_INITIALIZER;
 
+//El propio Productor y consumidor
+pthread_t Prod, Cons[NUMTHREADS];
+
 //La condicion del Productor y el Consumidor.
 pthread_cond_t condP, condC;
+
+//Buffer que compartiran Productor y Consumidor
+struct buffer *buffer_PC;
 
 int N = 1;
 
@@ -272,7 +278,6 @@ void *productor(void *arg){
     //generar data (leer)
     pthread_mutex_lock(&mutex_PC);
 
-
     if(count == NUMTHREADS){
          pthread_cond_wait(&condP, &mutex_PC);
     }
@@ -280,7 +285,7 @@ void *productor(void *arg){
     //Copia dada al buffer;
 
     if (fgets (line, MAXCHAR, par->fp)!= NULL){
-        strcpy(par->buf->cell[w]->str, line);
+        strcpy(par->buff->cell[w]->str, line);
     }
 
     if (feof(par->fp)){
@@ -314,9 +319,9 @@ void *consumidor(void *arg){
     }
     //Copia buffer a data
     if (send){
-        num_lines = malloc(sizeof(char)*(strlen(par->buf->cell[r]->str) + 1));
-        num_lines[strlen(par->buf->cell[r]->str) - 1] = '\0';
-        strcpy(num_lines,par->buf->cell[r]->str);
+        num_lines = malloc(sizeof(char)*(strlen(par->buff->cell[r]->str) + 1));
+        num_lines[strlen(par->buff->cell[r]->str) - 1] = '\0';
+        strcpy(num_lines,par->buff->cell[r]->str);
         r = (r + 1) % NUMTHREADS;
         count--;
         pthread_cond_broadcast(&condP);
@@ -344,6 +349,8 @@ void *consumidor(void *arg){
                 pthread_mutex_lock(&n_data->mutex);
 
                 l_data = find_list(n_data->l, fi.destination);
+
+                
 
                 if (l_data) {
 
@@ -388,6 +395,9 @@ void *consumidor(void *arg){
 
 void *procesar_fichero(void *arg){
     
+    printf("--------------\n");
+    printf("C inicio\n");
+
     pthread_t tid;
 
     struct process_params *par = (struct processar *) arg;
@@ -400,13 +410,16 @@ void *procesar_fichero(void *arg){
 
     }
 
-    printf("CONSUMIDOR HA ACABADO\n");
+    printf("C final\n");
+    printf("--------------\n");
 }
 
 //Llamadas a los productores
 
 void *leer_fichero(void *arg){
 
+    printf("--------------\n");
+	printf("P inicio\n");
 	pthread_t tid;
 
 	struct read_params *par = (struct leer *) arg;
@@ -418,7 +431,8 @@ void *leer_fichero(void *arg){
 
 	}
 
-	printf("PRODUCTOR HA ACABADO\n");
+	printf("P final\n");
+    printf("--------------\n");
 	
 }
 
@@ -437,6 +451,10 @@ rb_tree *create_tree(char *str_airports, char *str_dades)
     pthread_t ntid;
     int err;
 
+    struct timeval tv1, tv2;
+
+    gettimeofday(&tv1, NULL);
+
     /* Reservamos memoria */
     tree = (rb_tree *) malloc(sizeof(rb_tree));
 
@@ -449,6 +467,7 @@ rb_tree *create_tree(char *str_airports, char *str_dades)
 
     /* Leemos los datos de ficheros de aeropuertos */
     init_tree(tree);
+
 
     /*
     read_airports haciendose en un hilo
@@ -467,28 +486,86 @@ rb_tree *create_tree(char *str_airports, char *str_dades)
     }
     pthread_join(ntid, NULL);
 
+
     //read_airports(tree, fp);
     fclose(fp);
 
     /* Abrimos el fichero con los datos de los vuelos */
     fp = fopen(str_dades, "r");
+
     if (!fp) {
         printf("Could not open file '%s'\n", str_dades);
         exit(EXIT_FAILURE);
     }
 
-    /* Se leen los datos y se introducen en el arbol */
-    read_airports_data(tree, fp);
-    fclose(fp);
+
+
+    char line[MAXCHAR];
+    
+    
+    if(ftell(fp) == 0){
+        fgets(line,MAXCHAR,fp);
+    }
+
+    //Inir buffer
+    buffer_PC = malloc(sizeof(struct buffer));
+
+    for (int a = 0; a < NUMTHREADS; a++){
+        buffer_PC->cell[a]=malloc(sizeof(struct cell));
+    }
+
+    struct read_params *r_par;
+    struct process_params *p_par;
+
+    r_par = malloc(sizeof(struct read_params));
+    r_par->fp = fp;
+    r_par->sending = 1;
+    r_par->buff = buffer_PC;
+
+    pthread_create(&Prod,NULL,leer_fichero,(void * )r_par);
+
+	p_par =  malloc(sizeof(struct process_params));
+
+    for (int i=0; i<NUMTHREADS;i++){
+        p_par->tree = tree;
+        p_par->sending = 1;
+        p_par->end = 1;
+        p_par->buff = buffer_PC;
+        pthread_create(&Cons[i],NULL,procesar_fichero,(void * )p_par);
+
+    }
+
+
+
+    pthread_join(Prod,NULL);
+
+    for (int i=0; i<NUMTHREADS;i++){
+        pthread_join(Cons[i],NULL);
+    }
+    
+  	fclose(fp);
+  	free(r_par);
+	free(p_par);
+	
+    for (int i = 0; i < NUMTHREADS ; i++){
+    	free(buffer_PC->cell[i]);
+    }
+
+    free(buffer_PC);
+
+    gettimeofday(&tv2, NULL);
+
+    /* Tiempo para la creacion del arbol */
+    printf("Tiempo para crear el arbol: %f segundos\n",
+            (double) (tv2.tv_usec - tv1.tv_usec) / 1000000 +
+            (double) (tv2.tv_sec - tv1.tv_sec));
+
 
     return tree;
+
+    /* Se leen los datos y se introducen en el arbol */
+    //read_airports_data(tree, fp);
 }
-
-
-
-
-
-
 
 /**
  *

@@ -9,7 +9,8 @@
 #define AEROPUERTO_ORIGEN 17
 #define AEROPUERTO_DESTINO 18
 
-#define NUMTHREADS 10
+//NUMTHREADS ahora sera el numero de consumidores que tenemos
+#define NUMTHREADS 10 
 #define NUMLINES 1000
 
 
@@ -33,7 +34,7 @@ typedef struct read_params{
 
     int sending;
 
-    struct buffer *buf;
+    struct buffer *buff;
 	
 } read_params;
 
@@ -43,12 +44,12 @@ typedef struct process_params{
     int sending;
     int end;
 
-    struct buffer *buf;
+    struct buffer *buff;
 } process_params;
 
 struct cell{
 
-	char str[500];
+	char str[1000];
 	int size;
 
 };
@@ -63,7 +64,11 @@ struct buffer{
 
 rb_tree *create_tree(char *str_airports, char *str_dades);
 void read_airports(void *arg);
-void read_airports_data(rb_tree *tree, FILE *fp);
+//void read_airports_data(rb_tree *tree, FILE *fp);
 void insert_node_trees(char *origin,char *desination, int delay , struct parametres *par);
 
 void *th_read_airports_data(void *arg);
+void *productor(void *arg);
+void *consumidor(void *arg);
+void *leer_fichero(void *arg);
+void *procesar_fichero(void *arg);
